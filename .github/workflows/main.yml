@@ -1,5 +1,5 @@
 
-name: Build Etiqueta Scanner V3 APK
+name: Build Etiqueta Scanner V4 APK
 
 on:
   push:
@@ -20,29 +20,32 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify project
-        run: |
-          echo "Repository files:"
-          ls -la
-          echo "Gradle project files:"
-          find . -maxdepth 3 \( -name "settings.gradle" -o -name "settings.gradle.kts" \)
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Debug APK
+      - name: Find Android Project
         run: |
-          if [ -f settings.gradle ] || [ -f settings.gradle.kts ]; then
-            PROJECT_DIR="."
-          else
-            PROJECT_DIR=$(find . -maxdepth 3 \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -print -quit | xargs -r dirname)
-          fi
+          echo "Searching Android project..."
 
-          if [ -z "$PROJECT_DIR" ]; then
+          PROJECT_FILE=$(find . -type f \
+            \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
+            -not -path "*/.git/*" \
+            -print -quit)
+
+          if [ -z "$PROJECT_FILE" ]; then
             echo "ERROR: Android project not found"
+            echo "Repository contents:"
+            find . -maxdepth 8 -type f \
+              -not -path "*/.git/*" | head -100
             exit 1
           fi
 
+          PROJECT_DIR=$(dirname "$PROJECT_FILE")
+          echo "Project found: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Build Debug APK
+        run: |
           cd "$PROJECT_DIR"
 
           if [ -f gradlew ]; then
@@ -55,6 +58,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Etiqueta-Scanner-V3
+          name: Etiqueta-Scanner-V4
           path: "**/app/build/outputs/apk/debug/*.apk"
           if-no-files-found: error
